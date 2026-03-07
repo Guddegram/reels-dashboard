@@ -1,0 +1,44 @@
+.reels-dashboard-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: -apple-system, sans-serif;
+  white-space: nowrap;
+  z-index: 9999;
+}
+
+.reels-dashboard-btn:hover:not(:disabled) {
+  background: #4f46e5;
+  transform: scale(1.02);
+}
+
+.reels-dashboard-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.reels-dashboard-float {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  z-index: 99999;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

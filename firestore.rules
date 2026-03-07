@@ -1,0 +1,26 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // User darf nur auf seine eigenen Daten zugreifen
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+      // Reels subcollection
+      match /reels/{reelId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+
+      // Categories subcollection
+      match /categories/{catId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // Alles andere: blockiert
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
