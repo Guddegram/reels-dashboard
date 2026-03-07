@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb, verifySession } from '@/lib/firebase/admin'
-import { FieldValue } from 'firebase-admin/firestore'
-import { cookies } from 'next/headers'
+import { createRouteClient } from '@/lib/supabase/server'
 
 const ALL_DEFAULTS = [
   { name: 'Business Ideas', slug: 'business-ideas', color: '#F59E0B', icon: '💡', sort_order: 1,  type: 'category' },
@@ -20,53 +18,48 @@ const ALL_DEFAULTS = [
 ]
 
 export async function GET() {
-  const uid = await verifySession(cookies().get('__session')?.value ?? '')
-  if (!uid) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 })
+  const supabase = createRouteClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 })
 
-  const catsRef = adminDb.collection('users').doc(uid).collection('categories')
-  const snap = await catsRef.orderBy('sort_order').get()
+  const { data: existing } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('sort_order')
 
-  if (snap.empty) {
-    // Seed defaults for new user
-    const batch = adminDb.batch()
-    for (const cat of ALL_DEFAULTS) {
-      batch.set(catsRef.doc(), { ...cat, created_at: FieldValue.serverTimestamp() })
-    }
-    await batch.commit()
-    const seeded = await catsRef.orderBy('sort_order').get()
-    return NextResponse.json(seeded.docs.map((d) => ({ id: d.id, ...d.data() })))
-  }
-
-  const existing = snap.docs.map((d) => ({ id: d.id, ...d.data() as any }))
-  const existingSlugs = new Set(existing.map((c) => c.slug))
+  const existingSlugs = new Set((existing ?? []).map((c: any) => c.slug))
   const missing = ALL_DEFAULTS.filter((d) => !existingSlugs.has(d.slug))
 
   if (missing.length > 0) {
-    const batch = adminDb.batch()
-    for (const cat of missing) {
-      batch.set(catsRef.doc(), { ...cat, created_at: FieldValue.serverTimestamp() })
-    }
-    await batch.commit()
-    const updated = await catsRef.orderBy('sort_order').get()
-    return NextResponse.json(updated.docs.map((d) => ({ id: d.id, ...d.data() })))
+    await supabase.from('categories').insert(
+      missing.map((cat) => ({ ...cat, user_id: user.id }))
+    )
+    const { data: updated } = await supabase
+      .from('categories')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('sort_order')
+    return NextResponse.json(updated ?? [])
   }
 
-  return NextResponse.json(existing)
+  return NextResponse.json(existing ?? [])
 }
 
 export async function POST(req: NextRequest) {
-  const uid = await verifySession(cookies().get('__session')?.value ?? '')
-  if (!uid) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 })
+  const supabase = createRouteClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 })
 
   const body = await req.json()
   const slug = body.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
 
-  const docRef = await adminDb.collection('users').doc(uid).collection('categories').add({
-    ...body,
-    slug,
-    created_at: FieldValue.serverTimestamp(),
-  })
+  const { data, error } = await supabase
+    .from('categories')
+    .insert({ ...body, slug, user_id: user.id })
+    .select()
+    .single()
 
-  const created = await docRef.get()
-  return NextResponse.json({ id: created.id, ...created.data() }, { status: 201 })
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(data, { status: 201 })
 }

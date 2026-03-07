@@ -78,6 +78,24 @@ export function AddReelDialog({ open, onClose, categories, onSaved, defaultProfi
     }
   }
 
+  const handleSaveDirect = async () => {
+    if (!url.trim()) return
+    setStep('saving')
+    try {
+      const res = await fetch('/api/reels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+      if (!res.ok) throw new Error('Speichern fehlgeschlagen')
+      onSaved()
+      handleClose()
+    } catch {
+      setError('Speichern fehlgeschlagen')
+      setStep('url')
+    }
+  }
+
   const handleSave = async () => {
     setStep('saving')
 
@@ -135,7 +153,17 @@ export function AddReelDialog({ open, onClose, categories, onSaved, defaultProfi
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link className="w-4 h-4" />}
               </Button>
             </div>
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && (
+              <div className="space-y-2">
+                <p className="text-sm text-red-500">{error}</p>
+                <button
+                  onClick={handleSaveDirect}
+                  className="w-full text-[12px] text-blue-500 hover:text-blue-700 underline underline-offset-2 text-left"
+                >
+                  URL trotzdem speichern (ohne Vorschau)
+                </button>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
               Kopiere den Link eines Instagram Reels und füge ihn hier ein.
             </p>

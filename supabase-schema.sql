@@ -110,3 +110,17 @@ INSERT INTO public.categories (user_id, name, slug, color, icon, sort_order) VAL
   ('DEINE-USER-ID', 'Lustig',         'lustig',         '#eab308', '😂', 8),
   ('DEINE-USER-ID', 'Sonstige',       'sonstige',       '#71717a', '📌', 9);
 */
+
+-- ================================================
+-- MIGRATION: Fehlende Spalten hinzufügen
+-- Falls Tabellen bereits existieren, diese SQL ausführen:
+-- ================================================
+
+-- type-Spalte zu categories (unterscheidet category vs profile)
+ALTER TABLE public.categories
+  ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'category'
+  CHECK (type IN ('category', 'profile'));
+
+-- profile_id zu reels (zweite Kategorie-Referenz für Profile)
+ALTER TABLE public.reels
+  ADD COLUMN IF NOT EXISTS profile_id UUID REFERENCES public.categories(id) ON DELETE SET NULL;

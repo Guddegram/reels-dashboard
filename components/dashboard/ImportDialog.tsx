@@ -17,18 +17,47 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
   const [errorMsg, setErrorMsg] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const parseCsv = (text: string): string[] => {
+    const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
+    const urls: string[] = []
+    for (const line of lines) {
+      // Find Instagram URLs in each line (skip header rows)
+      const match = line.match(/https?:\/\/(?:www\.)?instagram\.com\/[^\s,"']+/)
+      if (match) urls.push(match[0])
+    }
+    return urls
+  }
+
   const handleFile = async (file: File) => {
     setStatus('loading')
     setErrorMsg('')
 
     try {
       const text = await file.text()
-      const json = JSON.parse(text)
+      let body: unknown
+
+      if (file.name.endsWith('.csv') || file.type === 'text/csv') {
+        const urls = parseCsv(text)
+        if (urls.length === 0) {
+          setErrorMsg('Keine Instagram-URLs in der CSV-Datei gefunden')
+          setStatus('error')
+          return
+        }
+        body = urls
+      } else {
+        try {
+          body = JSON.parse(text)
+        } catch {
+          setErrorMsg('Ungültige JSON-Datei. Bitte eine gültige JSON oder CSV Datei hochladen.')
+          setStatus('error')
+          return
+        }
+      }
 
       const res = await fetch('/api/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(json),
+        body: JSON.stringify(body),
       })
 
       const data = await res.json()
@@ -43,7 +72,7 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
       setStatus('success')
       onImported()
     } catch {
-      setErrorMsg('Ungültige JSON-Datei')
+      setErrorMsg('Datei konnte nicht gelesen werden')
       setStatus('error')
     }
   }
@@ -89,12 +118,13 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
               onDragOver={(e) => e.preventDefault()}
             >
               <Upload className="w-8 h-8 mx-auto mb-3 text-muted-foreground" />
-              <p className="font-medium">saved_posts.json hier ablegen</p>
+              <p className="font-medium">JSON oder CSV hier ablegen</p>
               <p className="text-sm text-muted-foreground mt-1">oder klicken zum Auswählen</p>
+              <p className="text-xs text-muted-foreground mt-2 opacity-70">Unterstützt: saved_posts.json · CSV mit Instagram-URLs</p>
               <input
                 ref={inputRef}
                 type="file"
-                accept=".json"
+                accept=".json,.csv"
                 className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
               />

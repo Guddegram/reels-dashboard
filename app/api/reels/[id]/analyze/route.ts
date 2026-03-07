@@ -1,21 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb, verifySession } from '@/lib/firebase/admin'
+import { createRouteClient } from '@/lib/supabase/server'
 import { analyzeReel } from '@/lib/gemini/analyze'
-import { FieldValue } from 'firebase-admin/firestore'
-import { cookies } from 'next/headers'
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const uid = await verifySession(cookies().get('__session')?.value ?? '')
-  if (!uid) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 })
+const REEL_SELECT = '*, category:categories!reels_category_id_fkey(id,name,slug,color,icon,type), profile:categories!reels_profile_id_fkey(id,name,slug,color,icon,type)'
 
-  const reelRef = adminDb.collection('users').doc(uid).collection('reels').doc(params.id)
-  const reelSnap = await reelRef.get()
+export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
+  const supabase = createRouteClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 })
 
-  if (!reelSnap.exists) return NextResponse.json({ error: 'Reel nicht gefunden' }, { status: 404 })
+  const { data: reel, error: fetchError } = await supabase
+    .from('reels')
+    .select('*')
+    .eq('id', params.id)
+    .eq('user_id', user.id)
+    .single()
 
-  const reel = reelSnap.data()!
+  if (fetchError || !reel) return NextResponse.json({ error: 'Reel nicht gefunden' }, { status: 404 })
 
-  await reelRef.update({ analysis_status: 'processing' })
+  await supabase.from('reels').update({ analysis_status: 'processing' }).eq('id', params.id)
 
   try {
     let thumbnailBase64: string | null = null
@@ -37,34 +40,25 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       thumbnailBase64,
     })
 
-    await reelRef.update({
-      gemini_summary: analysis.summary,
-      gemini_transcript: analysis.transcript,
-      gemini_tags: analysis.tags,
-      gemini_category_suggestion: analysis.category_suggestion,
-      analysis_status: 'done',
-      updated_at: FieldValue.serverTimestamp(),
-    })
+    const { data: updated, error: updateError } = await supabase
+      .from('reels')
+      .update({
+        gemini_summary: analysis.summary,
+        gemini_transcript: analysis.transcript,
+        gemini_tags: analysis.tags,
+        gemini_category_suggestion: analysis.category_suggestion,
+        analysis_status: 'done',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', params.id)
+      .select(REEL_SELECT)
+      .single()
 
-    const updated = await reelRef.get()
-    const d = updated.data()!
-    return NextResponse.json({
-      id: updated.id,
-      ...d,
-      saved_at: d.saved_at?.toDate?.()?.toISOString() ?? d.saved_at,
-      updated_at: d.updated_at?.toDate?.()?.toISOString() ?? d.updated_at,
-      category: d.category_id ? {
-        id: d.category_id, name: d.category_name ?? null, slug: d.category_slug ?? null,
-        color: d.category_color ?? null, icon: d.category_icon ?? null, type: 'category',
-      } : null,
-      profile: d.profile_id ? {
-        id: d.profile_id, name: d.profile_name ?? null, slug: d.profile_slug ?? null,
-        color: d.profile_color ?? null, icon: d.profile_icon ?? null, type: 'profile',
-      } : null,
-    })
+    if (updateError) throw updateError
+    return NextResponse.json(updated)
   } catch (err) {
     console.error('[Gemini analyze error]', err)
-    await reelRef.update({ analysis_status: 'failed' })
+    await supabase.from('reels').update({ analysis_status: 'failed' }).eq('id', params.id)
     return NextResponse.json({ error: 'Analyse fehlgeschlagen' }, { status: 500 })
   }
 }

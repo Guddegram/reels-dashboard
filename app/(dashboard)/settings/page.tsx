@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import type { Category } from '@/types'
-import { Trash2, Plus, Loader2 } from 'lucide-react'
+import { Trash2, Plus, Loader2, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 
 export default function SettingsPage() {
   const [categories, setCategories] = useState<Category[]>([])
@@ -56,9 +57,16 @@ export default function SettingsPage() {
       <Header search="" onSearchChange={() => {}} onAddReel={() => {}} onImport={() => {}} />
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-10">
-        <div>
-          <h1 className="text-lg font-semibold mb-1">Einstellungen</h1>
-          <p className="text-sm text-muted-foreground">Profile und Kategorien verwalten</p>
+        <div className="flex items-center gap-3">
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg">
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-lg font-semibold mb-0.5">Einstellungen</h1>
+            <p className="text-sm text-muted-foreground">Profile und Kategorien verwalten</p>
+          </div>
         </div>
 
         {/* Profile */}
