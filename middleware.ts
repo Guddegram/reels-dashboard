@@ -7,8 +7,9 @@ export async function middleware(req: NextRequest) {
 
   const isLoginPage = req.nextUrl.pathname.startsWith('/login')
   const isApiAuth = req.nextUrl.pathname.startsWith('/api/auth')
+  const isShortcutsApi = req.nextUrl.pathname.startsWith('/api/shortcuts')
 
-  if (isApiAuth) return res
+  if (isApiAuth || isShortcutsApi) return res
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
