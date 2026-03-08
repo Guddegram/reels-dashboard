@@ -61,6 +61,31 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       } catch { /* Continue without image */ }
     }
 
+    // Save thumbnail to Supabase Storage if not already stored
+    if (thumbnailBase64 && !currentReel.thumbnail_url) {
+      try {
+        const imageBuffer = Buffer.from(thumbnailBase64, 'base64')
+        const storagePath = `${user.id}/${params.id}.jpg`
+
+        const { error: uploadError } = await supabase.storage
+          .from('thumbnails')
+          .upload(storagePath, imageBuffer, {
+            contentType: 'image/jpeg',
+            upsert: true,
+          })
+
+        if (!uploadError) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('thumbnails')
+            .getPublicUrl(storagePath)
+
+          // Update thumbnail_url in the DB
+          await supabase.from('reels').update({ thumbnail_url: publicUrl }).eq('id', params.id)
+          currentReel = { ...currentReel, thumbnail_url: publicUrl }
+        }
+      } catch { /* Continue without storing */ }
+    }
+
     // Step 1: Basic analysis
     const analysis = await analyzeReel({
       url: currentReel.url,

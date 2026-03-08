@@ -18,7 +18,8 @@ interface ReelCardProps {
 
 export function ReelCard({ reel, onFavoriteToggle, onAnalyze, onDelete, onClick, selectMode, selected, onSelect }: ReelCardProps) {
   const [imgError, setImgError] = useState(false)
-  const thumbnail = reel.thumbnail_url || reel.external_thumbnail
+  const rawThumbnail = reel.thumbnail_url || reel.external_thumbnail
+  const thumbnail = rawThumbnail && !reel.thumbnail_url ? `/api/thumbnail?url=${encodeURIComponent(rawThumbnail)}` : rawThumbnail
 
   const handleClick = () => {
     if (selectMode) {
