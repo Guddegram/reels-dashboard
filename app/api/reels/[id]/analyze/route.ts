@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteClient } from '@/lib/supabase/server'
+import { adminSupabase } from '@/lib/supabase/admin'
 import { analyzeReel } from '@/lib/gemini/analyze'
 import { analyzeBusinessPotential, isBusinessRelevant } from '@/lib/gemini/business-analyze'
 import { extractReelMetadata } from '@/lib/instagram/extract'
@@ -8,7 +9,19 @@ const REEL_SELECT = '*, category:categories!reels_category_id_fkey(id,name,slug,
 
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   const supabase = createRouteClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user: sessionUser } } = await supabase.auth.getUser()
+
+  // Allow internal calls from iOS Shortcut / shortcuts API via X-Internal-Token
+  let user = sessionUser ?? null
+  if (!user) {
+    const internalToken = _req.headers.get('x-internal-token')
+    if (internalToken && internalToken === process.env.SHORTCUT_TOKEN) {
+      const { data: reelRow } = await adminSupabase
+        .from('reels').select('user_id').eq('id', params.id).single()
+      if (reelRow) user = { id: reelRow.user_id } as typeof sessionUser
+    }
+  }
+
   if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 })
 
   const { data: reel, error: fetchError } = await supabase
