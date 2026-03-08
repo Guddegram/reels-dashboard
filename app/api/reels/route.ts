@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get('search')
   const sort = searchParams.get('sort') || 'newest'
   const favorites = searchParams.get('favorites') === 'true'
-  const limit = parseInt(searchParams.get('limit') || '1000')
+  const limit = parseInt(searchParams.get('limit') || '4000')
 
   let query = supabase
     .from('reels')
