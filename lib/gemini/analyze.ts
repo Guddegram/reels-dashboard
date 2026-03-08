@@ -15,13 +15,19 @@ export async function analyzeReel({
   title,
   description,
   thumbnailBase64,
+  categories,
 }: {
   url: string
   author?: string | null
   title?: string | null
   description?: string | null
   thumbnailBase64?: string | null
+  categories?: string[]
 }): Promise<GeminiAnalysis> {
+  const categoryList = categories && categories.length > 0
+    ? categories.join(', ')
+    : 'Business Ideas, KI, Claude, Gemini, OpenAI, Religion, Sport, Lustig, Sonstige'
+
   const prompt = `Du bist ein Content-Analyse-Assistent für Instagram Reels.
 
 Ein Nutzer hat diesen Reel gespeichert. Du kannst keine URLs abrufen – analysiere stattdessen die folgenden Metadaten:
@@ -39,7 +45,7 @@ Antworte NUR als JSON (kein Markdown, kein Text davor/danach):
 {
   "summary": "2-3 Sätze: Was zeigt/erklärt dieser Reel? Basiere dich auf Caption und Bild",
   "tags": ["hashtag1", "hashtag2", "hashtag3"],
-  "category_suggestion": "Eine aus: Business Ideas, KI, Claude, Gemini, OpenAI, Religion, Sport, Lustig, Sonstige",
+  "category_suggestion": "Eine aus: ${categoryList}",
   "transcript": "Transkript der Caption/Text im Bild falls erkennbar, sonst leerer String",
   "language": "de oder en"
 }`

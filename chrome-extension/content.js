@@ -1,7 +1,7 @@
 // Reels Dashboard - Content Script
 // Läuft auf instagram.com und fügt "Speichern" Buttons hinzu
 
-const DASHBOARD_URL = 'http://localhost:3000' // Ändern wenn deployed
+const DASHBOARD_URL = 'https://reels-dashboard-alpha.vercel.app'
 
 let lastUrl = location.href
 let buttonInjected = false
@@ -43,7 +43,7 @@ function createSaveButton(reelUrl) {
     btn.disabled = true
 
     try {
-      const res = await fetch(`${DASHBOARD_URL}/api/import`, {
+      const res = await fetch(`${DASHBOARD_URL}/api/import?analyze=true`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

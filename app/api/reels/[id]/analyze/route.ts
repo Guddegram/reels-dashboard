@@ -21,6 +21,13 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   await supabase.from('reels').update({ analysis_status: 'processing' }).eq('id', params.id)
 
   try {
+    const { data: userCategories } = await supabase
+      .from('categories')
+      .select('name')
+      .eq('user_id', user.id)
+      .eq('type', 'category')
+    const categoryNames = (userCategories ?? []).map((c: { name: string }) => c.name)
+
     let thumbnailBase64: string | null = null
     const thumbUrl = reel.thumbnail_url || reel.external_thumbnail
 
@@ -38,6 +45,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       title: reel.title,
       description: reel.description,
       thumbnailBase64,
+      categories: categoryNames,
     })
 
     const { data: updated, error: updateError } = await supabase

@@ -1,4 +1,4 @@
-const DASHBOARD_URL = 'http://localhost:3000'
+const DASHBOARD_URL = 'https://reels-dashboard-alpha.vercel.app'
 
 document.getElementById('openBtn').addEventListener('click', () => {
   chrome.tabs.create({ url: DASHBOARD_URL })
@@ -28,7 +28,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
   btn.disabled = true
 
   try {
-    const res = await fetch(`${DASHBOARD_URL}/api/import`, {
+    const res = await fetch(`${DASHBOARD_URL}/api/import?analyze=true`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

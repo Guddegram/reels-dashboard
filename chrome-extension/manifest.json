@@ -4,7 +4,7 @@
   "version": "1.0",
   "description": "Speichere Instagram Reels direkt in deinem Dashboard",
   "permissions": ["activeTab", "storage"],
-  "host_permissions": ["https://www.instagram.com/*"],
+  "host_permissions": ["https://www.instagram.com/*", "https://reels-dashboard-alpha.vercel.app/*"],
   "content_scripts": [
     {
       "matches": ["https://www.instagram.com/*"],

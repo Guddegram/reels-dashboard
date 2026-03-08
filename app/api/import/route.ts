@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     }
 
     const now = new Date().toISOString()
-    const { error } = await supabase.from('reels').insert(
+    const { data: inserted, error } = await supabase.from('reels').insert(
       newUrls.map((item) => ({
         url: item.url,
         user_id: user.id,
@@ -54,9 +54,22 @@ export async function POST(req: NextRequest) {
         saved_at: item.savedAt ? new Date(item.savedAt * 1000).toISOString() : now,
         updated_at: now,
       }))
-    )
+    ).select('id')
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // Auto-analyze: trigger analyze for each newly imported reel (fire and forget)
+    const autoAnalyze = req.nextUrl.searchParams.get('analyze') === 'true' || (body.url && !body.skipAnalyze)
+    if (autoAnalyze && inserted && inserted.length > 0) {
+      const baseUrl = req.nextUrl.origin
+      inserted.forEach(({ id }: { id: string }) => {
+        fetch(`${baseUrl}/api/reels/${id}/analyze`, {
+          method: 'POST',
+          headers: { cookie: req.headers.get('cookie') || '' },
+        }).catch(() => { /* ignore */ })
+      })
+    }
+
     return NextResponse.json({ imported: newUrls.length, skipped: existingUrls.size, total: urls.length })
   } catch (err) {
     console.error('[import error]', err)

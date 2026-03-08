@@ -79,7 +79,12 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 {profiles.map((p) => (
                   <div key={p.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-card border shadow-sm">
-                    <span className="text-sm">{p.name}</span>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs" style={{ backgroundColor: p.color + '22', border: `1.5px solid ${p.color}55` }}>
+                        {p.icon}
+                      </div>
+                      <span className="text-sm">{p.name}</span>
+                    </div>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -124,7 +129,12 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 {cats.map((c) => (
                   <div key={c.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-card border shadow-sm">
-                    <span className="text-sm">{c.name}</span>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs" style={{ backgroundColor: c.color + '22', border: `1.5px solid ${c.color}55` }}>
+                        {c.icon}
+                      </div>
+                      <span className="text-sm">{c.name}</span>
+                    </div>
                     <Button
                       variant="ghost"
                       size="icon"
