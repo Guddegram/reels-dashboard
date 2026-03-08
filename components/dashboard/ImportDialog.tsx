@@ -59,7 +59,7 @@ export function ImportDialog({ open, onClose, onImported, categories }: ImportDi
         }
       }
 
-      const params = new URLSearchParams()
+      const params = new URLSearchParams({ analyze: 'true' })
       if (profileId && profileId !== 'none') params.set('profile_id', profileId)
 
       const res = await fetch(`/api/import?${params}`, {
