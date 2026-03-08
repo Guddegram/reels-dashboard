@@ -3,25 +3,30 @@
 import { useState, useRef } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Upload, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import type { Category } from '@/types'
 
 interface ImportDialogProps {
   open: boolean
   onClose: () => void
   onImported: () => void
+  categories: Category[]
 }
 
-export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
+export function ImportDialog({ open, onClose, onImported, categories }: ImportDialogProps) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [result, setResult] = useState<{ imported: number; skipped: number; total: number } | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
+  const [profileId, setProfileId] = useState('none')
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const profiles = categories.filter((c) => c.type === 'profile')
 
   const parseCsv = (text: string): string[] => {
     const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
     const urls: string[] = []
     for (const line of lines) {
-      // Find Instagram URLs in each line (skip header rows)
       const match = line.match(/https?:\/\/(?:www\.)?instagram\.com\/[^\s,"']+/)
       if (match) urls.push(match[0])
     }
@@ -54,7 +59,10 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
         }
       }
 
-      const res = await fetch('/api/import', {
+      const params = new URLSearchParams()
+      if (profileId && profileId !== 'none') params.set('profile_id', profileId)
+
+      const res = await fetch(`/api/import?${params}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -109,6 +117,26 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
             </ol>
           </div>
 
+          {/* Profile selector */}
+          {status === 'idle' && profiles.length > 0 && (
+            <div className="space-y-1.5">
+              <label className="text-[12px] font-medium text-gray-700">Profil zuweisen (optional)</label>
+              <Select value={profileId} onValueChange={setProfileId}>
+                <SelectTrigger className="h-9 text-sm bg-white border-gray-200 rounded-lg">
+                  <SelectValue placeholder="Kein Profil" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Kein Profil</SelectItem>
+                  {profiles.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.icon} {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Upload area */}
           {status === 'idle' && (
             <div
@@ -153,7 +181,7 @@ export function ImportDialog({ open, onClose, onImported }: ImportDialogProps) {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                Die Reels sind jetzt im Dashboard. Klicke auf einzelne Karten um Gemini die Analyse zu starten.
+                Die Reels werden automatisch analysiert — das kann ein paar Minuten dauern.
               </p>
               <Button onClick={() => { reset(); onClose() }} className="w-full">
                 Fertig

@@ -44,11 +44,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ imported: 0, skipped: urls.length, message: 'Alle URLs bereits vorhanden' })
     }
 
+    const profileId = req.nextUrl.searchParams.get('profile_id') || null
+
     const now = new Date().toISOString()
     const { data: inserted, error } = await supabase.from('reels').insert(
       newUrls.map((item) => ({
         url: item.url,
         user_id: user.id,
+        profile_id: profileId,
         analysis_status: 'pending',
         is_favorite: false,
         saved_at: item.savedAt ? new Date(item.savedAt * 1000).toISOString() : now,

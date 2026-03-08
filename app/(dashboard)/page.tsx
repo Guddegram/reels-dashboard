@@ -257,6 +257,7 @@ export default function DashboardPage() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         onImported={fetchReels}
+        categories={categories}
       />
 
       {/* Add Reel Dialog */}
