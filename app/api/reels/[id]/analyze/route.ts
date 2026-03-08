@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteClient } from '@/lib/supabase/server'
 import { analyzeReel } from '@/lib/gemini/analyze'
+import { extractReelMetadata } from '@/lib/instagram/extract'
 
 const REEL_SELECT = '*, category:categories!reels_category_id_fkey(id,name,slug,color,icon,type), profile:categories!reels_profile_id_fkey(id,name,slug,color,icon,type)'
 
@@ -28,8 +29,28 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       .eq('type', 'category')
     const categoryNames = (userCategories ?? []).map((c: { name: string }) => c.name)
 
+    // Auto-extract metadata if missing (bulk imports only have URL)
+    let currentReel = reel
+    if (!reel.external_thumbnail && !reel.thumbnail_url && !reel.title) {
+      try {
+        const meta = await extractReelMetadata(reel.url)
+        if (meta.external_thumbnail || meta.title || meta.author_username) {
+          await supabase.from('reels').update({
+            external_thumbnail: meta.external_thumbnail,
+            instagram_id: meta.instagram_id ?? reel.instagram_id,
+            title: meta.title,
+            author_username: meta.author_username,
+            author_name: meta.author_name,
+            description: meta.description,
+            updated_at: new Date().toISOString(),
+          }).eq('id', params.id)
+          currentReel = { ...reel, ...meta }
+        }
+      } catch { /* Continue without metadata */ }
+    }
+
     let thumbnailBase64: string | null = null
-    const thumbUrl = reel.thumbnail_url || reel.external_thumbnail
+    const thumbUrl = currentReel.thumbnail_url || currentReel.external_thumbnail
 
     if (thumbUrl) {
       try {
@@ -40,10 +61,10 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     }
 
     const analysis = await analyzeReel({
-      url: reel.url,
-      author: reel.author_username,
-      title: reel.title,
-      description: reel.description,
+      url: currentReel.url,
+      author: currentReel.author_username,
+      title: currentReel.title,
+      description: currentReel.description,
       thumbnailBase64,
       categories: categoryNames,
     })
