@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { Reel, Category } from '@/types'
-import { Heart, ExternalLink, Pencil, Sparkles, Loader2, Play, ArrowUpDown } from 'lucide-react'
+import { Heart, ExternalLink, Pencil, Sparkles, Loader2, Play, ArrowUpDown, CheckSquare, Trash2, X } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
 
 export default function DashboardPage() {
@@ -27,6 +27,11 @@ export default function DashboardPage() {
   const [importOpen, setImportOpen] = useState(false)
   const [selectedReel, setSelectedReel] = useState<Reel | null>(null)
   const [analyzingAll, setAnalyzingAll] = useState(false)
+
+  // Multi-select state
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [deletingBulk, setDeletingBulk] = useState(false)
 
   // Edit state
   const [editMode, setEditMode] = useState(false)
@@ -149,6 +154,37 @@ export default function DashboardPage() {
     setAnalyzingAll(false)
   }
 
+  const toggleSelectMode = () => {
+    setSelectMode((v) => !v)
+    setSelectedIds(new Set())
+  }
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const selectAll = () => {
+    setSelectedIds(new Set(reels.map((r) => r.id)))
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    if (!confirm(`${selectedIds.size} Reels wirklich löschen?`)) return
+    setDeletingBulk(true)
+    await Promise.all([...selectedIds].map((id) =>
+      fetch(`/api/reels/${id}`, { method: 'DELETE' })
+    ))
+    setSelectedIds(new Set())
+    setSelectMode(false)
+    setDeletingBulk(false)
+    fetchReels()
+  }
+
   const filterLabel = () => {
     if (activeFilter.type === 'all') return 'Alle Reels'
     if (activeFilter.type === 'favorites') return 'Favoriten'
@@ -184,29 +220,66 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-[15px] font-semibold text-gray-900">{filterLabel()}</h2>
-              <p className="text-[12px] text-gray-400 mt-0.5">{total} Reels</p>
+              <p className="text-[12px] text-gray-400 mt-0.5">
+                {selectMode && selectedIds.size > 0 ? `${selectedIds.size} ausgewählt` : `${total} Reels`}
+              </p>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-600 hover:text-gray-900 hover:bg-white border border-transparent hover:border-gray-200 transition-all disabled:opacity-50"
-                onClick={handleAnalyzeAll}
-                disabled={analyzingAll}
-              >
-                {analyzingAll
-                  ? <><Loader2 className="w-3 h-3 animate-spin" /> Analysiere...</>
-                  : <><Sparkles className="w-3 h-3" /> Alle analysieren</>
-                }
-              </button>
-              <Select value={sort} onValueChange={setSort}>
-                <SelectTrigger className="w-36 h-8 text-[12px] bg-white border-gray-200 rounded-lg">
-                  <ArrowUpDown className="w-3 h-3 mr-1 text-gray-400" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">Neueste zuerst</SelectItem>
-                  <SelectItem value="oldest">Älteste zuerst</SelectItem>
-                </SelectContent>
-              </Select>
+              {selectMode ? (
+                <>
+                  <button
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-600 hover:text-gray-900 hover:bg-white border border-transparent hover:border-gray-200 transition-all"
+                    onClick={selectAll}
+                  >
+                    Alle auswählen
+                  </button>
+                  <button
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-all disabled:opacity-50"
+                    onClick={handleBulkDelete}
+                    disabled={selectedIds.size === 0 || deletingBulk}
+                  >
+                    {deletingBulk
+                      ? <><Loader2 className="w-3 h-3 animate-spin" /> Löschen...</>
+                      : <><Trash2 className="w-3 h-3" /> {selectedIds.size > 0 ? `${selectedIds.size} löschen` : 'Löschen'}</>
+                    }
+                  </button>
+                  <button
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all"
+                    onClick={toggleSelectMode}
+                  >
+                    <X className="w-3 h-3" /> Abbrechen
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-600 hover:text-gray-900 hover:bg-white border border-transparent hover:border-gray-200 transition-all"
+                    onClick={toggleSelectMode}
+                  >
+                    <CheckSquare className="w-3 h-3" /> Auswählen
+                  </button>
+                  <button
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-600 hover:text-gray-900 hover:bg-white border border-transparent hover:border-gray-200 transition-all disabled:opacity-50"
+                    onClick={handleAnalyzeAll}
+                    disabled={analyzingAll}
+                  >
+                    {analyzingAll
+                      ? <><Loader2 className="w-3 h-3 animate-spin" /> Analysiere...</>
+                      : <><Sparkles className="w-3 h-3" /> Alle analysieren</>
+                    }
+                  </button>
+                  <Select value={sort} onValueChange={setSort}>
+                    <SelectTrigger className="w-36 h-8 text-[12px] bg-white border-gray-200 rounded-lg">
+                      <ArrowUpDown className="w-3 h-3 mr-1 text-gray-400" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="newest">Neueste zuerst</SelectItem>
+                      <SelectItem value="oldest">Älteste zuerst</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </>
+              )}
             </div>
           </div>
 
@@ -245,6 +318,9 @@ export default function DashboardPage() {
                   onAnalyze={handleAnalyze}
                   onDelete={handleDelete}
                   onClick={setSelectedReel}
+                  selectMode={selectMode}
+                  selected={selectedIds.has(reel.id)}
+                  onSelect={toggleSelect}
                 />
               ))}
             </div>

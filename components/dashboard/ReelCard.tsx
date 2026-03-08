@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Reel } from '@/types'
-import { Heart, Sparkles, ExternalLink, Trash2, Play } from 'lucide-react'
+import { Heart, Sparkles, ExternalLink, Trash2, Play, Check } from 'lucide-react'
 
 interface ReelCardProps {
   reel: Reel
@@ -11,16 +11,27 @@ interface ReelCardProps {
   onAnalyze: (id: string) => void
   onDelete: (id: string) => void
   onClick: (reel: Reel) => void
+  selectMode?: boolean
+  selected?: boolean
+  onSelect?: (id: string) => void
 }
 
-export function ReelCard({ reel, onFavoriteToggle, onAnalyze, onDelete, onClick }: ReelCardProps) {
+export function ReelCard({ reel, onFavoriteToggle, onAnalyze, onDelete, onClick, selectMode, selected, onSelect }: ReelCardProps) {
   const [imgError, setImgError] = useState(false)
   const thumbnail = reel.thumbnail_url || reel.external_thumbnail
 
+  const handleClick = () => {
+    if (selectMode) {
+      onSelect?.(reel.id)
+    } else {
+      onClick(reel)
+    }
+  }
+
   return (
     <div
-      className="group relative rounded-2xl overflow-hidden cursor-pointer bg-gray-100 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5"
-      onClick={() => onClick(reel)}
+      className={`group relative rounded-2xl overflow-hidden cursor-pointer bg-gray-100 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 ${selected ? 'ring-2 ring-blue-500 ring-offset-1' : ''}`}
+      onClick={handleClick}
     >
       {/* Thumbnail 9:16 */}
       <div className="relative aspect-[9/16] overflow-hidden bg-gray-200">
@@ -41,32 +52,43 @@ export function ReelCard({ reel, onFavoriteToggle, onAnalyze, onDelete, onClick 
         {/* Gradient overlay bottom */}
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
 
-        {/* Top-right hover actions */}
-        <div className="absolute top-2 right-2 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-          <ActionBtn
-            onClick={(e) => { e.stopPropagation(); onFavoriteToggle(reel.id, !reel.is_favorite) }}
-            active={reel.is_favorite}
-            title="Favorit"
-          >
-            <Heart className={`w-3.5 h-3.5 ${reel.is_favorite ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-          </ActionBtn>
-          <ActionBtn
-            onClick={(e) => { e.stopPropagation(); window.open(reel.url, '_blank') }}
-            title="Instagram öffnen"
-          >
-            <ExternalLink className="w-3.5 h-3.5 text-white" />
-          </ActionBtn>
-          <ActionBtn
-            onClick={(e) => { e.stopPropagation(); onDelete(reel.id) }}
-            danger
-            title="Löschen"
-          >
-            <Trash2 className="w-3.5 h-3.5 text-white" />
-          </ActionBtn>
-        </div>
+        {/* Select checkbox (top-left) */}
+        {selectMode && (
+          <div className="absolute top-2 left-2 z-10">
+            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${selected ? 'bg-blue-500 border-blue-500' : 'bg-white/30 border-white/70 backdrop-blur-sm'}`}>
+              {selected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+            </div>
+          </div>
+        )}
 
-        {/* Favorite indicator (always visible) */}
-        {reel.is_favorite && (
+        {/* Top-right hover actions (hidden in select mode) */}
+        {!selectMode && (
+          <div className="absolute top-2 right-2 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+            <ActionBtn
+              onClick={(e) => { e.stopPropagation(); onFavoriteToggle(reel.id, !reel.is_favorite) }}
+              active={reel.is_favorite}
+              title="Favorit"
+            >
+              <Heart className={`w-3.5 h-3.5 ${reel.is_favorite ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+            </ActionBtn>
+            <ActionBtn
+              onClick={(e) => { e.stopPropagation(); window.open(reel.url, '_blank') }}
+              title="Instagram öffnen"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-white" />
+            </ActionBtn>
+            <ActionBtn
+              onClick={(e) => { e.stopPropagation(); onDelete(reel.id) }}
+              danger
+              title="Löschen"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-white" />
+            </ActionBtn>
+          </div>
+        )}
+
+        {/* Favorite indicator (always visible, not in select mode) */}
+        {reel.is_favorite && !selectMode && (
           <div className="absolute top-2 left-2">
             <Heart className="w-4 h-4 fill-red-500 text-red-500 drop-shadow-sm" />
           </div>
@@ -109,7 +131,7 @@ export function ReelCard({ reel, onFavoriteToggle, onAnalyze, onDelete, onClick 
         </p>
         <div className="flex items-center justify-between">
           <span className="text-[11px] text-gray-400">@{reel.author_username || '—'}</span>
-          {(reel.analysis_status === 'pending' || reel.analysis_status === 'failed') && (
+          {!selectMode && (reel.analysis_status === 'pending' || reel.analysis_status === 'failed') && (
             <button
               className="flex items-center gap-0.5 text-[10px] text-blue-500 hover:text-blue-700 font-medium transition-colors"
               onClick={(e) => { e.stopPropagation(); onAnalyze(reel.id) }}
