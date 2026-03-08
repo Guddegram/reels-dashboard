@@ -12,6 +12,18 @@ export interface Category {
   created_at: string
 }
 
+export interface BusinessAnalysis {
+  is_relevant: boolean
+  fit_score: number
+  potential_score: number
+  overall_score: number
+  reasoning: string
+  matching_project: string | null
+  new_project_name: string | null
+  business_plan: string
+  action_items: string[]
+}
+
 export interface Reel {
   id: string
   user_id: string
@@ -34,6 +46,10 @@ export interface Reel {
   author_name: string | null
   is_favorite: boolean
   notes: string | null
+  business_score: number
+  business_analysis: BusinessAnalysis | null
+  is_business_relevant: boolean
+  plate_synced: boolean
   saved_at: string
   updated_at: string
 }

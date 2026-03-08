@@ -94,6 +94,15 @@ export function ReelCard({ reel, onFavoriteToggle, onAnalyze, onDelete, onClick,
           </div>
         )}
 
+        {/* Business score badge */}
+        {!selectMode && reel.is_business_relevant && (reel.business_score ?? 0) >= 7 && (
+          <div className="absolute top-2 left-2">
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-400/90 text-amber-900 backdrop-blur-sm">
+              💡 {reel.business_score}/10
+            </span>
+          </div>
+        )}
+
         {/* Status badge bottom-left */}
         {reel.analysis_status !== 'done' && (
           <div className="absolute bottom-2 left-2">
