@@ -18,9 +18,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'SHORTCUT_USER_ID not configured' }, { status: 500 })
   }
 
-  const body = await req.json()
-  const url: string = body.url
-  const profileId: string | null = body.profile_id ?? null
+  // Support both JSON body and query params (iOS Shortcuts sends query params more reliably)
+  const urlParam = req.nextUrl.searchParams.get('url')
+  const profileParam = req.nextUrl.searchParams.get('profile_id')
+
+  let url: string = urlParam ?? ''
+  let profileId: string | null = profileParam ?? null
+
+  if (!urlParam) {
+    try {
+      const body = await req.json()
+      url = body.url ?? ''
+      profileId = body.profile_id ?? null
+    } catch {
+      // body might be empty when using query params
+    }
+  }
 
   if (!url || !url.includes('instagram.com')) {
     return NextResponse.json({ error: 'Ungültige Instagram-URL' }, { status: 400 })
